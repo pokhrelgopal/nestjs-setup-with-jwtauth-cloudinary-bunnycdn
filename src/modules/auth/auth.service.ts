@@ -14,6 +14,7 @@ import {
   ResetPasswordDto,
   VerifyDto,
 } from 'src/interfaces/user.interface';
+import { SuccessResponse } from 'src/interfaces/response.interface';
 
 @Injectable()
 export class AuthService {
@@ -23,7 +24,7 @@ export class AuthService {
     private mailerService: MailerService,
   ) {}
 
-  async verifyEmail(verifyDto: VerifyDto) {
+  async verifyEmail(verifyDto: VerifyDto): Promise<SuccessResponse<any>> {
     const { email, otp } = verifyDto;
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user || user.otp !== otp) {
@@ -33,10 +34,13 @@ export class AuthService {
       where: { email },
       data: { isVerified: true, otp: null },
     });
-    return { message: 'Email verified successfully' };
+    return {
+      statusCode: 200,
+      message: 'Email verified successfully',
+    };
   }
 
-  async login(loginDto: LoginDto) {
+  async login(loginDto: LoginDto): Promise<SuccessResponse<any>> {
     const { email, password } = loginDto;
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
@@ -51,10 +55,16 @@ export class AuthService {
     }
     const accessToken = this.generateAccessToken(user);
     const refreshToken = this.generateRefreshToken(user);
-    return { accessToken, refreshToken };
+    return {
+      statusCode: 200,
+      message: 'Login successful',
+      data: { accessToken, refreshToken },
+    };
   }
 
-  async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+  async forgotPassword(
+    forgotPasswordDto: ForgotPasswordDto,
+  ): Promise<SuccessResponse<any>> {
     const { email } = forgotPasswordDto;
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
@@ -67,10 +77,15 @@ export class AuthService {
     });
     console.log('OTP for resetting password : ', resetToken);
     await this.mailerService.sendResetOtp(email, resetToken);
-    return { message: 'Reset token sent to email' };
+    return {
+      statusCode: 200,
+      message: 'Reset token sent to email',
+    };
   }
 
-  async resetPassword(resetPasswordDto: ResetPasswordDto) {
+  async resetPassword(
+    resetPasswordDto: ResetPasswordDto,
+  ): Promise<SuccessResponse<any>> {
     const { otp, newPassword } = resetPasswordDto;
     const user = await this.prisma.user.findFirst({
       where: { resetToken: otp, resetTokenExpires: { gt: new Date() } },
@@ -87,7 +102,10 @@ export class AuthService {
         resetTokenExpires: null,
       },
     });
-    return { message: 'Password reset successfully' };
+    return {
+      statusCode: 200,
+      message: 'Password reset successfully',
+    };
   }
 
   async refreshToken(refreshToken: string): Promise<Record<string, string>> {

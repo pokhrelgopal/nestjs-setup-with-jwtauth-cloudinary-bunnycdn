@@ -1,5 +1,5 @@
 export interface SuccessResponse<T> {
-  status: boolean;
+  message: string;
   statusCode: number;
-  data: T;
+  data?: T;
 }

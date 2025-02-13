@@ -7,7 +7,6 @@ import { PrismaService } from '../../db/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { MailerService } from '../../shared/mailer/mailer.service';
 import { CreateUserDto } from 'src/interfaces/user.interface';
-import { User } from '@prisma/client';
 import { SuccessResponse } from 'src/interfaces/response.interface';
 
 @Injectable()
@@ -17,7 +16,7 @@ export class UserService {
     private mailerService: MailerService,
   ) {}
 
-  async register(createUserDto: CreateUserDto) {
+  async register(createUserDto: CreateUserDto): Promise<SuccessResponse<any>> {
     const { email, password, fullName } = createUserDto;
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
@@ -37,7 +36,11 @@ export class UserService {
       },
       select: { id: true, email: true, fullName: true },
     });
-    return { message: 'User registered. Please verify your email.', user };
+    return {
+      message: 'User registered. Please verify your email.',
+      statusCode: 201,
+      data: user,
+    };
   }
 
   async getMe(user: any): Promise<SuccessResponse<any>> {
@@ -54,13 +57,21 @@ export class UserService {
     }
 
     return {
-      status: true,
+      message: 'User details fetched successfully',
       statusCode: 200,
       data: foundUser,
     };
   }
 
-  async findOne(email: string): Promise<User | null> {
-    return this.prisma.user.findUnique({ where: { email } });
+  async findOne(email: string): Promise<SuccessResponse<any>> {
+    const user = this.prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    return {
+      message: 'User found',
+      statusCode: 200,
+      data: user,
+    };
   }
 }
