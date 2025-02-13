@@ -6,18 +6,13 @@ import { AuthGuard } from 'src/common/guards/auth.guard';
 import { RefreshTokenStrategy } from './jwt.strategy';
 import { PrismaService } from 'src/db/prisma.service';
 import { MailerService } from 'src/shared/mailer/mailer.service';
-import { ConfigModule } from 'src/config/config.module';
-import { ConfigService } from 'src/config/config.service';
 
 @Module({
   imports: [
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        secret: configService.jwtSecret,
-        signOptions: { expiresIn: '1h' },
-      }),
-      inject: [ConfigService],
+    JwtModule.register({
+      global: true,
+      secret: process.env.JWT_SECRET,
+      signOptions: { expiresIn: '60s' },
     }),
   ],
   providers: [

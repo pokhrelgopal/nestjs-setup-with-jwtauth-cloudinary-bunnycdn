@@ -6,6 +6,7 @@ import { CloudinaryModule } from './shared/cloudinary/cloudinary.module';
 import { BunnyModule } from './shared/bunny/bunny.module';
 import { MailerModule } from './shared/mailer/mailer.module';
 import { ConfigModule } from './config/config.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ConfigModule } from './config/config.module';
     BunnyModule,
     MailerModule,
     ConfigModule,
+    AuthModule,
   ],
   controllers: [],
   providers: [],

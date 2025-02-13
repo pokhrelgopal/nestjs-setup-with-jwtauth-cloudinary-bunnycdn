@@ -41,17 +41,26 @@ export class UserService {
   }
 
   async getMe(user: any): Promise<SuccessResponse<any>> {
+    if (!user || !user.sub) {
+      throw new UnauthorizedException('User not found');
+    }
     const foundUser = await this.prisma.user.findUnique({
-      where: { id: user.id },
+      where: { id: user.sub },
       select: { id: true, email: true, fullName: true },
     });
+
     if (!foundUser) {
       throw new UnauthorizedException('User not found');
     }
+
     return {
       status: true,
       statusCode: 200,
       data: foundUser,
     };
+  }
+
+  async findOne(email: string): Promise<User | null> {
+    return this.prisma.user.findUnique({ where: { email } });
   }
 }
