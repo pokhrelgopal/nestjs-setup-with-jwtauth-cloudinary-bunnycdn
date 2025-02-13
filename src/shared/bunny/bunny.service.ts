@@ -25,8 +25,6 @@ export class BunnyService {
     const filename = `${randomString}-${file.originalname}`;
     const uploadUrl = `https://${this.HOSTNAME}/${this.STORAGE_ZONE_NAME}/${filename}`;
 
-    console.log(`📤 Uploading to BunnyCDN: ${uploadUrl}`);
-
     try {
       const response = await fetch(uploadUrl, {
         method: 'PUT',
@@ -39,7 +37,7 @@ export class BunnyService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`❌ Upload failed: ${response.status} - ${errorText}`);
+        console.error(`🚨 Upload Failed: ${response.status} - ${errorText}`);
         throw new InternalServerErrorException(
           `Bunny CDN Upload Error: ${errorText}`,
         );

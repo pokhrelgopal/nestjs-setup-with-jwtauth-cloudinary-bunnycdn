@@ -4,46 +4,24 @@ import {
   UnauthorizedException,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
-import { CreateUserDto } from './dto/create-user.dto';
+import { PrismaService } from '../../db/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import { LoginDto } from './dto/login.dto';
-import { VerifyDto } from './dto/verify.dto';
-import { ForgotPasswordDto } from './dto/forgot-password.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
-import { MailerService } from '../mailer/mailer.service';
+import { MailerService } from '../../shared/mailer/mailer.service';
+import {
+  ForgotPasswordDto,
+  LoginDto,
+  ResetPasswordDto,
+  VerifyDto,
+} from 'src/interfaces/user.interface';
 
 @Injectable()
-export class UserService {
+export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
     private mailerService: MailerService,
   ) {}
-
-  async register(createUserDto: CreateUserDto) {
-    const { email, password, fullName } = createUserDto;
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email },
-    });
-    if (existingUser) {
-      throw new BadRequestException('User already exists');
-    }
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    await this.mailerService.sendOtpMail(email, otp);
-    const user = await this.prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        fullName,
-        otp,
-      },
-      select: { id: true, email: true, fullName: true },
-    });
-    return { message: 'User registered. Please verify your email.', user };
-  }
 
   async verifyEmail(verifyDto: VerifyDto) {
     const { email, otp } = verifyDto;
@@ -71,23 +49,9 @@ export class UserService {
     if (!isValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    const token = this.jwtService.sign({ userId: user.id });
-    return { token };
-  }
-
-  async getMe(user) {
-    const foundUser = await this.prisma.user.findUnique({
-      where: { id: user.userId },
-      select: { id: true, email: true, fullName: true },
-    });
-    if (!foundUser) {
-      throw new UnauthorizedException('User not found');
-    }
-    return foundUser;
-  }
-
-  async logout() {
-    return { message: 'User logged out successfully' };
+    const accessToken = this.generateAccessToken(user);
+    const refreshToken = this.generateRefreshToken(user);
+    return { accessToken, refreshToken };
   }
 
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
@@ -124,5 +88,38 @@ export class UserService {
       },
     });
     return { message: 'Password reset successfully' };
+  }
+
+  async refreshToken(refreshToken: string): Promise<Record<string, string>> {
+    try {
+      const payload = this.jwtService.verify(refreshToken, {
+        secret: process.env.JWT_REFRESH_SECRET,
+      });
+      const user = { id: payload.sub, email: payload.email };
+      const token = this.generateAccessToken(user);
+      return { token };
+    } catch (error) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  private generateAccessToken(user: any): string {
+    return this.jwtService.sign(
+      { sub: user.id, email: user.email },
+      {
+        secret: process.env.JWT_SECRET,
+        expiresIn: '1h',
+      },
+    );
+  }
+
+  private generateRefreshToken(user: any): string {
+    return this.jwtService.sign(
+      { sub: user.id, email: user.email },
+      {
+        secret: process.env.JWT_SECRET,
+        expiresIn: '7d',
+      },
+    );
   }
 }
